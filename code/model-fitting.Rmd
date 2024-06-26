@@ -1,0 +1,389 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+
+# We First Import the dataset
+```{r}
+df <- read.csv("C:/Users/nimal/eclipse-workspace/CourseProjects/syCourseProject/DS/dataset/engine_data_scaled.csv")
+str(df)
+```
+
+# Dataset Balancing
+
+we observe that the class is imbalanced, this causes the model to overfit to predict one class, leading to low values of specificity and negative 
+
+```{r}
+nrow(subset(df, Engine.Condition == 1))
+nrow(subset(df, Engine.Condition == 0))
+```
+```{r}
+set.seed(123) 
+df$Engine.Condition = factor(df$Engine.Condition)
+
+class_counts <- table(df$Engine.Condition)
+min_class_count <- min(class_counts)
+
+# Randomly sample from each class to make it equal
+balanced_df <- do.call(rbind, lapply(levels(df$Engine.Condition), function(x) {
+  df_class <- df[df$Engine.Condition == x, ]
+  return(df_class[sample(nrow(df_class), min_class_count), ])
+}))
+
+# Check the structure of the balanced dataset
+str(balanced_df)
+```
+
+```{r}
+# test if balanced
+table(balanced_df$Engine.Condition)
+```
+
+# Test and Train Split
+
+```{r}
+library(caret)
+library(caTools)
+set.seed(123)
+
+# Create the train-test split indices
+train_index <- split_vector<-sample.split(balanced_df$Engine.Condition, SplitRatio = 0.75)
+
+# Create the training and testing datasets
+train_data <- balanced_df[train_index, ]
+test_data <- balanced_df[!train_index, ]
+
+# Check the dimensions of the training and testing datasets
+dim(train_data)
+dim(test_data)
+```
+```{r}
+# even the train and test data is class balanced
+table(train_data$Engine.Condition)
+table(test_data$Engine.Condition)
+```
+```{r}
+names(train_data)
+```
+
+
+# Logistic Regression
+
+### Simple, Without Dropping any Column
+```{r}
+model_LR <- glm(Engine.Condition ~ Engine.rpm+Lub.oil.pressure+Fuel.pressure+Coolant.pressure+lub.oil.temp+ Coolant.temp, data = train_data, family = binomial)
+summary(model_LR)
+```
+
+```{r}
+# only using this will give logits, but we need probability
+predict(model_LR, newdata = test_data)[1]
+
+plogis(predict(model_LR, newdata = test_data)[1]) # it will convert logit to probability of positive class
+```
+
+```{r}
+threshold = 0.56
+predicted_values_LR = plogis(predict(model_LR, newdata=test_data)) > threshold
+
+correct <- sum(predicted_values_LR == as.logical(as.integer(test_data$Engine.Condition)-1))
+total <- nrow(test_data)
+
+print(c("accuracy = ", correct/total))
+```
+
+```{r}
+# CONFUSION MATRIX
+confusion_matrix <- table(predicted = predicted_values_LR, actual = test_data$Engine.Condition)
+confusion_matrix
+```
+
+```{r}
+# PRINT PRECISION, NEGATIVE PREDICTED SCORE, SENSITIVITY, SPECIFICITY, FP RATE, FN RATE
+paste("PRECISION : ", confusion_matrix[2, 2]/sum(confusion_matrix[2, ]))
+paste("NEGATIVE PREDICTED SCORE : ", confusion_matrix[1, 1]/sum(confusion_matrix[1, ]))
+paste("SENSITIVITY : ", confusion_matrix[2, 2]/sum(confusion_matrix[, 2]))
+paste("SPECIFICITY : ", confusion_matrix[1, 1]/sum(confusion_matrix[, 1]))
+paste("FP RATE : ", confusion_matrix[1, 2]/sum(confusion_matrix[, 2]))
+paste("FN RATE : ", confusion_matrix[2, 1]/sum(confusion_matrix[, 1]))
+```
+
+
+### With Dropping some un-necessary Column
+```{r}
+model_LR1 <- glm(Engine.Condition ~ Engine.rpm+Lub.oil.pressure+Fuel.pressure+lub.oil.temp+ Coolant.temp, data = train_data, family = binomial)
+summary(model_LR1)
+```
+
+```{r}
+# only using this will give logits, but we need probability
+predict(model_LR1, newdata = test_data)[1]
+
+plogis(predict(model_LR1, newdata = test_data)[1]) # it will convert logit to probability of positive class
+```
+
+```{r}
+threshold = 0.54
+predicted_values_LR = plogis(predict(model_LR1, newdata=test_data)) > threshold
+
+correct <- sum(predicted_values_LR == as.logical(as.integer(test_data$Engine.Condition)-1))
+total <- nrow(test_data)
+
+print(c("accuracy = ", correct/total))
+```
+
+
+```{r}
+# CONFUSION MATRIX
+confusion_matrix <- table(predicted = predicted_values_LR, actual = test_data$Engine.Condition)
+confusion_matrix
+```
+
+```{r}
+# PRINT PRECISION, NEGATIVE PREDICTED SCORE, SENSITIVITY, SPECIFICITY, FP RATE, FN RATE
+paste("PRECISION : ", confusion_matrix[2, 2]/sum(confusion_matrix[2, ]))
+paste("NEGATIVE PREDICTED SCORE : ", confusion_matrix[1, 1]/sum(confusion_matrix[1, ]))
+paste("SENSITIVITY : ", confusion_matrix[2, 2]/sum(confusion_matrix[, 2]))
+paste("SPECIFICITY : ", confusion_matrix[1, 1]/sum(confusion_matrix[, 1]))
+paste("FP RATE : ", confusion_matrix[1, 2]/sum(confusion_matrix[, 2]))
+paste("FN RATE : ", confusion_matrix[2, 1]/sum(confusion_matrix[, 1]))
+```
+
+```{r}
+saveRDS(model_LR1, "LR1.rds")
+```
+
+```{r}
+(predicted_values_LR == as.logical(as.integer(test_data$Engine.Condition)-1))[1:5]
+head(test_data, 5)
+```
+
+
+# KNN
+```{r}
+library(class)
+sqrt(nrow(train_data))
+```
+
+```{r}
+k <- seq(sqrt(nrow(train_data))-20, sqrt(nrow(train_data))+20)
+accuracy <- c()
+total <- nrow(test_data)
+
+for(i in 1:40) {
+  predicted_values_KNN <- knn(train = train_data[, -7], test = test_data[, -7], cl = train_data$Engine.Condition, k = k[i])
+  correct <- sum(as.logical(as.integer(predicted_values_KNN)-1) == as.logical(as.integer(test_data$Engine.Condition)-1))
+  accuracy[i] = correct/total
+}
+```
+
+```{r}
+accuracy[which.max(accuracy)]
+```
+
+```{r}
+# Highest Accuracy Index re-training
+predicted_values_KNN <- knn(train = train_data[, -7], test = test_data[, -7], cl = train_data$Engine.Condition, k = which.max(accuracy))
+```
+
+```{r}
+# CONFUSION MATRIX
+confusion_matrix <- table(predicted = predicted_values_KNN, actual = test_data$Engine.Condition)
+confusion_matrix
+```
+
+```{r}
+# PRINT PRECISION, NEGATIVE PREDICTED SCORE, SENSITIVITY, SPECIFICITY, FP RATE, FN RATE
+paste("PRECISION : ", confusion_matrix[2, 2]/sum(confusion_matrix[2, ]))
+paste("NEGATIVE PREDICTED SCORE : ", confusion_matrix[1, 1]/sum(confusion_matrix[1, ]))
+paste("SENSITIVITY : ", confusion_matrix[2, 2]/sum(confusion_matrix[, 2]))
+paste("SPECIFICITY : ", confusion_matrix[1, 1]/sum(confusion_matrix[, 1]))
+paste("FP RATE : ", confusion_matrix[1, 2]/sum(confusion_matrix[, 2]))
+paste("FN RATE : ", confusion_matrix[2, 1]/sum(confusion_matrix[, 1]))
+```
+
+# Weighted-KNN
+```{r}
+library(class)
+sqrt(nrow(train_data))
+```
+
+```{r}
+k <- seq(sqrt(nrow(train_data))-20, sqrt(nrow(train_data))+20)
+accuracy <- c()
+total <- nrow(test_data)
+
+for(i in 1:40) {
+  predicted_values_WKNN <- knn(train = train_data[, -7], test = test_data[, -7], cl = train_data$Engine.Condition, k = k[i], prob=T)
+  correct <- sum(as.logical(as.integer(predicted_values_WKNN)-1) == as.logical(as.integer(test_data$Engine.Condition)-1))
+  accuracy[i] = correct/total
+}
+```
+
+```{r}
+accuracy[which.max(accuracy)]
+```
+
+```{r}
+# Highest Accuracy Index re-training
+predicted_values_WKNN <- knn(train = train_data[, -7], test = test_data[, -7], cl = train_data$Engine.Condition, k = which.max(accuracy), prob = T)
+```
+
+```{r}
+# CONFUSION MATRIX
+confusion_matrix <- table(predicted = predicted_values_WKNN, actual = test_data$Engine.Condition)
+confusion_matrix
+```
+
+```{r}
+# PRINT PRECISION, NEGATIVE PREDICTED SCORE, SENSITIVITY, SPECIFICITY, FP RATE, FN RATE
+paste("PRECISION : ", confusion_matrix[2, 2]/sum(confusion_matrix[2, ]))
+paste("NEGATIVE PREDICTED SCORE : ", confusion_matrix[1, 1]/sum(confusion_matrix[1, ]))
+paste("SENSITIVITY : ", confusion_matrix[2, 2]/sum(confusion_matrix[, 2]))
+paste("SPECIFICITY : ", confusion_matrix[1, 1]/sum(confusion_matrix[, 1]))
+paste("FP RATE : ", confusion_matrix[1, 2]/sum(confusion_matrix[, 2]))
+paste("FN RATE : ", confusion_matrix[2, 1]/sum(confusion_matrix[, 1]))
+```
+
+# Random Forest
+
+```{r}
+library(randomForest)
+```
+
+```{r}
+accuracy = c()
+for(i in range(140:200)) {
+  model <- randomForest(Engine.Condition ~ ., data = train_data, ntree = i)
+  predicted_values_RF <- predict(model, test_data)
+  correct <- sum(predicted_values_RF == test_data$Engine.Condition)
+  accuracy[i] = correct/total
+}
+```
+
+```{r}
+accuracy[which.max(accuracy)]
+which.max(accuracy)
+```
+
+```{r}
+model <- randomForest(Engine.Condition ~ ., data = train_data, ntree = 140)
+predicted_values_RF <- predict(model, test_data)
+```
+
+```{r}
+# CONFUSION MATRIX
+confusion_matrix <- table(predicted = predicted_values_RF, actual = test_data$Engine.Condition)
+confusion_matrix
+```
+
+```{r}
+# PRINT PRECISION, NEGATIVE PREDICTED SCORE, SENSITIVITY, SPECIFICITY, FP RATE, FN RATE
+paste("PRECISION : ", confusion_matrix[2, 2]/sum(confusion_matrix[2, ]))
+paste("NEGATIVE PREDICTED SCORE : ", confusion_matrix[1, 1]/sum(confusion_matrix[1, ]))
+paste("SENSITIVITY : ", confusion_matrix[2, 2]/sum(confusion_matrix[, 2]))
+paste("SPECIFICITY : ", confusion_matrix[1, 1]/sum(confusion_matrix[, 1]))
+paste("FP RATE : ", confusion_matrix[1, 2]/sum(confusion_matrix[, 2]))
+paste("FN RATE : ", confusion_matrix[2, 1]/sum(confusion_matrix[, 1]))
+```
+
+```{r}
+saveRDS(model, "RF.rds")
+```
+
+#  Naive Bayes
+
+```{r}
+# Install and load necessary packages
+install.packages("e1071")
+library(e1071)
+
+
+model_NB <- naiveBayes(train_data[, -ncol(train_data)], train_data[, ncol(train_data)])
+
+# Make predictions on test data
+predicted_values_NB <- predict(model_NB, test_data[, -ncol(test_data)])
+
+# Print predictions
+print(predicted_values_NB)
+```
+
+```{r}
+summary(model_NB)
+```
+
+```{r}
+correct <- sum(as.logical(as.integer(predicted_values_NB)-1) == as.logical(as.integer(test_data$Engine.Condition)-1))
+total <- nrow(test_data)
+
+print(c("accuracy = ", correct/total))
+```
+
+```{r}
+# CONFUSION MATRIX
+confusion_matrix <- table(predicted = predicted_values_NB, actual = test_data$Engine.Condition)
+confusion_matrix
+```
+
+```{r}
+# PRINT PRECISION, NEGATIVE PREDICTED SCORE, SENSITIVITY, SPECIFICITY, FP RATE, FN RATE
+paste("PRECISION : ", confusion_matrix[2, 2]/sum(confusion_matrix[2, ]))
+paste("NEGATIVE PREDICTED SCORE : ", confusion_matrix[1, 1]/sum(confusion_matrix[1, ]))
+paste("SENSITIVITY : ", confusion_matrix[2, 2]/sum(confusion_matrix[, 2]))
+paste("SPECIFICITY : ", confusion_matrix[1, 1]/sum(confusion_matrix[, 1]))
+paste("FP RATE : ", confusion_matrix[1, 2]/sum(confusion_matrix[, 2]))
+paste("FN RATE : ", confusion_matrix[2, 1]/sum(confusion_matrix[, 1]))
+```
+
+# Decision Tree
+
+```{r}
+library(rpart)
+
+# Assuming train_data has the response variable as the last column
+# and test_data is similar without the response variable
+
+# Train decision tree model
+model_DT <- rpart(train_data[, ncol(train_data)] ~ ., data = train_data[, -ncol(train_data)])
+
+# Make predictions on test data
+predicted_values_DT <- predict(model_DT, test_data)
+```
+
+```{r}
+
+predicted_classes <- apply(predicted_values_DT, 1, which.max)
+```
+
+```{r}
+predicted_classes = predicted_classes-1
+print(predicted_classes)
+```
+
+```{r}
+correct <- sum(as.logical(as.integer(predicted_classes)) == as.logical(as.integer(test_data$Engine.Condition)-1))
+total <- nrow(test_data)
+
+print(c("accuracy = ", correct/total))
+```
+
+```{r}
+# CONFUSION MATRIX
+confusion_matrix <- table(predicted = predicted_classes, actual = test_data$Engine.Condition)
+confusion_matrix
+```
+
+```{r}
+# PRINT PRECISION, NEGATIVE PREDICTED SCORE, SENSITIVITY, SPECIFICITY, FP RATE, FN RATE
+paste("PRECISION : ", confusion_matrix[2, 2]/sum(confusion_matrix[2, ]))
+paste("NEGATIVE PREDICTED SCORE : ", confusion_matrix[1, 1]/sum(confusion_matrix[1, ]))
+paste("SENSITIVITY : ", confusion_matrix[2, 2]/sum(confusion_matrix[, 2]))
+paste("SPECIFICITY : ", confusion_matrix[1, 1]/sum(confusion_matrix[, 1]))
+paste("FP RATE : ", confusion_matrix[1, 2]/sum(confusion_matrix[, 2]))
+paste("FN RATE : ", confusion_matrix[2, 1]/sum(confusion_matrix[, 1]))
+```
+
+
+

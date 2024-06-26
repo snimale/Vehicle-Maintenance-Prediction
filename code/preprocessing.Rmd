@@ -1,0 +1,279 @@
+---
+title: "Engine Health - Data Preprocessing"
+output:
+  html_document:
+    df_print: paged
+Author: Soham Nimale
+---
+
+```{r}
+ds = read.csv("C:/Users/nimal/eclipse-workspace/CourseProjects/syCourseProject/DS/dataset/engine_data.csv")
+```
+
+column details
+
+```{r}
+summary(ds)
+```
+```{r}
+str(ds)
+```
+### Checking For Null Values
+```{r}
+# checking for null values
+sum(is.na(ds$Engine.rpm))
+sum(is.na(ds$Coolant.temp))
+sum(is.na(ds$lub.oil.temp))
+sum(is.na(ds$Coolant.pressure))
+sum(is.na(ds$Fuel.pressure))
+sum(is.na(ds$Lub.oil.pressure))
+sum(is.na(ds$Engine.Condition))
+```
+## Remove Outliers
+#### Engine RPM
+```{r}
+# Engine RPM analysis
+data = ds$Engine.rpm
+min(data)
+max(data)
+mean(data)
+```
+```{r}
+library(ggplot2)
+ggplot(data=ds, mapping=aes(x=Engine.rpm))+geom_histogram(bins=100)
+```
+```{r}
+Q1 = quantile(ds$Engine.rpm, 0.25)
+Q3 = quantile(ds$Engine.rpm, 0.75)
+print(paste("25th Percentile => ", Q1))
+print(paste("75th Percentile => ", Q3))
+IQR = Q3 - Q1
+print(paste("Inter Quartile Range => ", IQR))
+print(paste("Theoritical Min => ", Q1 - 1.7 * IQR))
+print(paste("Theoritical Max => ", Q3 + 1.7 * IQR))
+```
+```{r}
+nrow(subset(ds, ds$Engine.rpm < Q1 - 1.5 * IQR))
+nrow(subset(ds, ds$Engine.rpm > Q3 + 1.5 * IQR))
+```
+The number of outliers are small enough for us to drop them
+```{r}
+# important => do not repeat this step again and again, it will try and remove outliers from the data set who already has its outliars removed.
+ds = subset(ds, ds$Engine.rpm > Q1 - 1.5 * IQR & ds$Engine.rpm < Q3 + 1.5 * IQR)
+```
+
+```{r}
+ggplot(data=ds, mapping=aes(x=Engine.rpm))+geom_histogram(bins=100)
+```
+#### Engine Lub Oil Pressure
+```{r}
+data = ds$Lub.oil.pressure
+min(data)
+max(data)
+mean(data)
+```
+
+```{r}
+ggplot(data=ds, mapping=aes(x=Lub.oil.pressure))+geom_histogram(bins=100)
+```
+
+```{r}
+mean = mean(ds$Lub.oil.pressure)
+std = sd(ds$Lub.oil.pressure)
+print(mean)
+print(std)
+```
+
+```{r}
+nrow(subset(ds, (ds$Lub.oil.pressure-mean)/std > 3.0))
+nrow(subset(ds, (ds$Lub.oil.pressure-mean)/std < -3.0))
+print(paste(nrow(ds), " = ", sum((ds$Lub.oil.pressure-mean)/std < -3.0 |  (ds$Lub.oil.pressure-mean)/std > 3.0), " + ", sum((ds$Lub.oil.pressure-mean)/std >= -3.0 &  (ds$Lub.oil.pressure-mean)/std <= 3.0)))
+```
+The number of outliers are small enough for us to drop them
+```{r}
+# important => do not repeat this step again and again, it will try and remove outliers from the data set who already has its outliars removed.
+ds = subset(ds, (ds$Lub.oil.pressure-mean)/std >= -3.0 &  (ds$Lub.oil.pressure-mean)/std <= 3.0)
+```
+
+```{r}
+ggplot(data=ds, mapping=aes(x=Lub.oil.pressure))+geom_histogram(bins=100)
+```
+#### Fuel.pressure
+```{r}
+data = ds$Fuel.pressure
+min(data)
+max(data)
+mean(data)
+```
+
+```{r}
+ggplot(data=ds, mapping=aes(x=Fuel.pressure))+geom_histogram(bins=100)
+```
+
+```{r}
+mean = mean(ds$Fuel.pressure)
+std = sd(ds$Fuel.pressure)
+print(mean)
+print(std)
+```
+
+```{r}
+nrow(subset(ds, (ds$Fuel.pressure-mean)/std > 3.0))
+nrow(subset(ds, (ds$Fuel.pressure-mean)/std < -3.0))
+print(paste(nrow(ds), " = ", sum((ds$Fuel.pressure-mean)/std < -3.0 |  (ds$Fuel.pressure-mean)/std > 3.0), " + ", sum((ds$Fuel.pressure-mean)/std >= -3.0 &  (ds$Fuel.pressure-mean)/std <= 3.0)))
+```
+Hmm, just to be sure we also check out outliers by IQR method
+```{r}
+Q1 = quantile(ds$Fuel.pressure, 0.25)
+Q3 = quantile(ds$Fuel.pressure, 0.75)
+print(paste("25th Percentile => ", Q1))
+print(paste("75th Percentile => ", Q3))
+IQR = Q3 - Q1
+print(paste("Inter Quartile Range => ", IQR))
+print(paste("Theoritical Min => ", Q1 - 1.7 * IQR))
+print(paste("Theoritical Max => ", Q3 + 1.7 * IQR))
+```
+```{r}
+nrow(subset(ds, ds$Fuel.pressure < Q1 - 1.5 * IQR))
+nrow(subset(ds, ds$Fuel.pressure > Q3 + 1.5 * IQR))
+```
+too much loss of data here as expected, so we go with our original plan, i.e. using z score
+```{r}
+# important => do not repeat this step again and again, it will try and remove outliers from the data set who already has its outliars removed.
+ds = subset(ds, (ds$Fuel.pressure-mean)/std >= -3.0 &  (ds$Fuel.pressure-mean)/std <= 3.0)
+```
+
+```{r}
+ggplot(data=ds, mapping=aes(x=Fuel.pressure))+geom_histogram(bins=100)
+```
+#### Coolant.pressure
+```{r}
+data = ds$Coolant.pressure
+min(data)
+max(data)
+mean(data)
+```
+
+```{r}
+ggplot(data=ds, mapping=aes(x=Coolant.pressure))+geom_histogram(bins=100)
+```
+
+```{r}
+mean = mean(ds$Coolant.pressure)
+std = sd(ds$Coolant.pressure)
+print(mean)
+print(std)
+```
+
+```{r}
+nrow(subset(ds, (ds$Coolant.pressure-mean)/std > 3.0))
+nrow(subset(ds, (ds$Coolant.pressure-mean)/std < -3.0))
+print(paste(nrow(ds), " = ", sum((ds$Coolant.pressure-mean)/std < -3.0 |  (ds$Coolant.pressure-mean)/std > 3.0), " + ", sum((ds$Coolant.pressure-mean)/std >= -3.0 &  (ds$Coolant.pressure-mean)/std <= 3.0)))
+```
+again, just to be sure, since graph is not perfectly normal, we check IQR method too for this
+```{r}
+Q1 = quantile(ds$Coolant.pressure, 0.25)
+Q3 = quantile(ds$Coolant.pressure, 0.75)
+print(paste("25th Percentile => ", Q1))
+print(paste("75th Percentile => ", Q3))
+IQR = Q3 - Q1
+print(paste("Inter Quartile Range => ", IQR))
+print(paste("Theoritical Min => ", Q1 - 1.7 * IQR))
+print(paste("Theoritical Max => ", Q3 + 1.7 * IQR))
+```
+```{r}
+nrow(subset(ds, ds$Coolant.pressure < Q1 - 1.5 * IQR))
+nrow(subset(ds, ds$Coolant.pressure > Q3 + 1.5 * IQR))
+```
+although this number is more than z score method, we still use this since it seems fair to drop these rows seeing the skeweness of graph on +ve side
+```{r}
+# important => do not repeat this step again and again, it will try and remove outliers from the data set who already has its outliars removed.
+ds = subset(ds, ds$Coolant.pressure > Q1 - 1.5 * IQR & ds$Coolant.pressure < Q3 + 1.5 * IQR)
+```
+
+```{r}
+ggplot(data=ds, mapping=aes(x=Coolant.pressure))+geom_histogram(bins=100)
+```
+#### lub.oil.temp
+```{r}
+data = ds$lub.oil.temp
+min(data)
+max(data)
+mean(data)
+```
+
+```{r}
+ggplot(data=ds, mapping=aes(x=lub.oil.temp))+geom_histogram(bins=100)
+```
+# THIS IS A WIERD LOOKING GRAPH, NEED HELP TO REMOVE OUTLIERS HERE, FOR NOW WE CONTINUE WITHOUT REMOVEING OUTLIERS
+
+#### Coolant.temp
+```{r}
+data = ds$Coolant.temp
+min(data)
+max(data)
+mean(data)
+```
+
+```{r}
+ggplot(data=ds, mapping=aes(x=Coolant.temp))+geom_histogram(bins=100)
+```
+again, a wierd looking graph, but something seems odd here :> we will remove outlier manually if needed
+```{r}
+mean = mean(ds$Coolant.temp)
+std = sd(ds$Coolant.temp)
+print(mean)
+print(std)
+```
+
+```{r}
+nrow(subset(ds, (ds$Coolant.temp-mean)/std > 3.0))
+nrow(subset(ds, (ds$Coolant.temp-mean)/std < -3.0))
+print(paste(nrow(ds), " = ", sum((ds$Coolant.temp-mean)/std < -3.0 |  (ds$Coolant.temp-mean)/std > 3.0), " + ", sum((ds$Coolant.temp-mean)/std >= -3.0 &  (ds$Coolant.temp-mean)/std <= 3.0)))
+```
+since outliers are obvious, we continue with the removal
+```{r}
+# important => do not repeat this step again and again, it will try and remove outliers from the data set who already has its outliars removed.
+ds = subset(ds, (ds$Coolant.temp-mean)/std >= -3.0 &  (ds$Coolant.temp-mean)/std <= 3.0)
+```
+
+```{r}
+ggplot(data=ds, mapping=aes(x=Coolant.temp))+geom_histogram(bins=100)
+```
+
+# Save the outliers and missing values removed File as a checkpoint
+```{r}
+write.csv(ds, "C:/Users/nimal/eclipse-workspace/CourseProjects/syCourseProject/DS/dataset/engine_data_removed_missing_and_outliers.csv", row.names=FALSE)
+```
+
+# feature scaling : now we bring all the columns scale to 0 to 1 (we use normalization since most graphs are not NORMAL, hence z score would be a poor indicator)
+
+```{r}
+# get the scaled one from file
+ds = read.csv("C:/Users/nimal/eclipse-workspace/CourseProjects/syCourseProject/DS/dataset/engine_data_removed_missing_and_outliers.csv")
+head(ds)
+```
+
+
+```{r}
+ds$Engine.rpm = (ds$Engine.rpm - min(ds$Engine.rpm))/(max(ds$Engine.rpm) - min(ds$Engine.rpm))
+ds$Lub.oil.pressure = (ds$Lub.oil.pressure - min(ds$Lub.oil.pressure))/(max(ds$Lub.oil.pressure) - min(ds$Lub.oil.pressure))
+ds$Fuel.pressure = (ds$Fuel.pressure - min(ds$Fuel.pressure))/(max(ds$Fuel.pressure) - min(ds$Fuel.pressure))
+ds$Coolant.pressure = (ds$Coolant.pressure - min(ds$Coolant.pressure))/(max(ds$Coolant.pressure) - min(ds$Coolant.pressure))
+ds$lub.oil.temp = (ds$lub.oil.temp - min(ds$lub.oil.temp))/(max(ds$lub.oil.temp) - min(ds$lub.oil.temp))
+ds$Coolant.temp = (ds$Coolant.temp - min(ds$Coolant.temp))/(max(ds$Coolant.temp) - min(ds$Coolant.temp))
+```
+
+#### test the scaled values
+```{r}
+print(paste(min(ds$Engine.rpm), max(ds$Engine.rpm)))
+print(paste(min(ds$Lub.oil.pressure), max(ds$Lub.oil.pressure)))
+print(paste(min(ds$Fuel.pressure), max(ds$Fuel.pressure)))
+print(paste(min(ds$Coolant.pressure), max(ds$Coolant.pressure)))
+print(paste(min(ds$lub.oil.temp), max(ds$lub.oil.temp)))
+print(paste(min(ds$Coolant.temp), max(ds$Coolant.temp)))
+```
+# Save the scaled values removed File as a checkpoint
+```{r}
+write.csv(ds, "C:/Users/nimal/eclipse-workspace/CourseProjects/syCourseProject/DS/dataset/engine_data_scaled.csv", row.names=FALSE)
+```

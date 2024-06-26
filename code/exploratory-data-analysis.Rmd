@@ -1,0 +1,152 @@
+---
+title: "Engine Health - Data Preprocessing"
+output:
+  html_document:
+    df_print: paged
+Author: Soham Nimale
+---
+# Import Dataset and libraries
+```{r}
+ds = read.csv("C:/Users/nimal/eclipse-workspace/CourseProjects/syCourseProject/DS/dataset/engine_data_scaled.csv")
+library(ggplot2)
+```
+
+```{r}
+str(ds)
+```
+# Bar charts - dependent categorical variables and aggegrated independent variables
+##### Relation between engine RPM and Engine Condition
+```{r}
+aggregated_column = c(mean(subset(ds, Engine.Condition==0)$Engine.rpm), mean(subset(ds, Engine.Condition==1)$Engine.rpm))
+engine_conditions = factor(c(0, 1))
+aggregated_ds = data.frame(engine_conditions, aggregated_column)
+str(aggregated_ds)
+```
+
+```{r}
+
+ggplot(data=aggregated_ds, mapping=aes(x=engine_conditions, y=aggregated_column, fill = engine_conditions))+geom_bar(stat = "identity")+ggtitle("Aggregated Comparison")+xlab("Engine Condition")+ylab("Average Engine RPM")
+
+```
+Bad condition engines tend to have a higher average engine rpm, when compared to good health engines.
+
+probable cause: Maintaining higher RPM not only increases the temperature of the engine but also degrades the quality of the engine oil and which results in frequent oil changes
+
+##### Relation between engine Lub.oil.pressure and Engine Condition
+```{r}
+aggregated_column = c(mean(subset(ds, Engine.Condition==0)$Lub.oil.pressure), mean(subset(ds, Engine.Condition==1)$Lub.oil.pressure))
+engine_conditions = factor(c(0, 1))
+aggregated_ds = data.frame(engine_conditions, aggregated_column)
+str(aggregated_ds)
+```
+
+```{r}
+
+ggplot(data=aggregated_ds, mapping=aes(x=engine_conditions, y=aggregated_column, fill = engine_conditions))+geom_bar(stat = "identity")+ggtitle("Aggregated Comparison")+xlab("Engine Condition")+ylab("Lub.oil.pressure")
+
+```
+Bad condition engines tend to have a lower average Lub.oil.pressure, when compared to good health engines.
+
+probable cause: a lower pressure is bad for engine, since it will limit the flow of oil in and out of engine, causing an increase in wear and tear and heat generation from friction.
+
+##### Relation between engine Fuel.pressure and Engine Condition
+```{r}
+aggregated_column = c(mean(subset(ds, Engine.Condition==0)$Fuel.pressure), mean(subset(ds, Engine.Condition==1)$Fuel.pressure))
+engine_conditions = factor(c(0, 1))
+aggregated_ds = data.frame(engine_conditions, aggregated_column)
+str(aggregated_ds)
+```
+
+```{r}
+
+ggplot(data=aggregated_ds, mapping=aes(x=engine_conditions, y=aggregated_column, fill = engine_conditions))+geom_bar(stat = "identity")+ggtitle("Aggregated Comparison")+xlab("Engine Condition")+ylab("Fuel.pressure")
+
+```
+Bad condition engines tend to have a lower average Fuel.pressure, when compared to good health engines.
+
+probable cause: the higher the fuel pressure, generally more the power generated, hence better the engine efficiency. Lower fuel pressure can also cause improper combustion even causing emissions.
+
+##### Relation between engine Coolant.pressure and Engine Condition
+```{r}
+aggregated_column = c(mean(subset(ds, Engine.Condition==0)$Coolant.pressure), mean(subset(ds, Engine.Condition==1)$Coolant.pressure))
+engine_conditions = factor(c(0, 1))
+aggregated_ds = data.frame(engine_conditions, aggregated_column)
+str(aggregated_ds)
+```
+
+```{r}
+
+ggplot(data=aggregated_ds, mapping=aes(x=engine_conditions, y=aggregated_column, fill = engine_conditions))+geom_bar(stat = "identity")+ggtitle("Aggregated Comparison")+xlab("Engine Condition")+ylab("Coolant.pressure")
+
+```
+Both good and bad engines seem to have an approx. equal average Coolant.pressure
+
+##### Relation between engine lub.oil.temp and Engine Condition
+```{r}
+aggregated_column = c(mean(subset(ds, Engine.Condition==0)$lub.oil.temp), mean(subset(ds, Engine.Condition==1)$lub.oil.temp))
+engine_conditions = factor(c(0, 1))
+aggregated_ds = data.frame(engine_conditions, aggregated_column)
+str(aggregated_ds)
+```
+
+```{r}
+
+ggplot(data=aggregated_ds, mapping=aes(x=engine_conditions, y=aggregated_column, fill = engine_conditions))+geom_bar(stat = "identity")+ggtitle("Aggregated Comparison")+xlab("Engine Condition")+ylab("lub.oil.temp")
+
+```
+Bad condition engines tend to have a higher average lub.oil.temp, when compared to good health engines.
+
+probable cause: higher the lub temperature, the bad for engine, as in higher temperature the chances of faliure of various components, and overall engine life shortens. It also leads to reduce in power generated and vapourization of lub, making it more viscus.
+
+##### Relation between engine Coolant.temp and Engine Condition
+```{r}
+aggregated_column = c(mean(subset(ds, Engine.Condition==0)$Coolant.temp), mean(subset(ds, Engine.Condition==1)$Coolant.temp))
+engine_conditions = factor(c(0, 1))
+aggregated_ds = data.frame(engine_conditions, aggregated_column)
+str(aggregated_ds)
+```
+
+```{r}
+
+ggplot(data=aggregated_ds, mapping=aes(x=engine_conditions, y=aggregated_column, fill = engine_conditions))+geom_bar(stat = "identity")+ggtitle("Aggregated Comparison")+xlab("Engine Condition")+ylab("Coolant.temp")
+
+```
+Both bad and good engines have approx same average coolant temp, but the good engine seems to have a little less temperature than bad ones.
+
+probable cause: the lower the temperature, the better it is for the engine. just like lub temp, same reasons apply for coolant temp as well.
+
+```{r}
+# Convert Engine.Condition to a factor
+ds$Engine.Condition <- factor(ds$Engine.Condition)
+
+# Plot separate boxplots for each level of Engine.Condition
+ggplot(data = ds, mapping = aes(x = factor(Engine.Condition), y = Engine.rpm)) +
+  geom_boxplot()
+```
+```{r}
+# Plot separate boxplots for each level of Engine.Condition
+ggplot(data = ds, mapping = aes(x = factor(Engine.Condition), y = Lub.oil.pressure)) +
+  geom_boxplot()
+```
+```{r}
+# Plot separate boxplots for each level of Engine.Condition
+ggplot(data = ds, mapping = aes(x = factor(Engine.Condition), y = lub.oil.temp)) +
+  geom_boxplot()
+```
+```{r}
+# Plot separate boxplots for each level of Engine.Condition
+ggplot(data = ds, mapping = aes(x = factor(Engine.Condition), y = Coolant.temp)) +
+  geom_boxplot()
+```
+```{r}
+# Plot separate boxplots for each level of Engine.Condition
+ggplot(data = ds, mapping = aes(x = factor(Engine.Condition), y = Coolant.pressure)) +
+  geom_boxplot()
+```
+```{r}
+# Plot separate boxplots for each level of Engine.Condition
+ggplot(data = ds, mapping = aes(x = factor(Engine.Condition), y = Fuel.pressure)) +
+  geom_boxplot()
+```
+```
+
